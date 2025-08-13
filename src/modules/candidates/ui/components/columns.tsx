@@ -34,10 +34,11 @@ export type Candidate = {
 interface ColumnsProps {
   onEdit?: (candidate: Candidate) => void;
   onDelete?: (candidate: Candidate) => void;
+  onViewDetails?: (candidate: Candidate) => void;
   isDeleting?: (candidateId: string) => boolean;
 }
 
-export const createColumns = ({ onEdit, onDelete, isDeleting }: ColumnsProps = {}): ColumnDef<Candidate>[] => [
+export const createColumns = ({ onEdit, onDelete, onViewDetails, isDeleting }: ColumnsProps = {}): ColumnDef<Candidate>[] => [
   {
     accessorKey: "firstName",
     header: ({ column }) => {
@@ -163,6 +164,9 @@ export const createColumns = ({ onEdit, onDelete, isDeleting }: ColumnsProps = {
             <DropdownMenuItem>View profile</DropdownMenuItem>
             <DropdownMenuItem onClick={() => onEdit?.(candidate)}>
               Edit candidate
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onViewDetails?.(candidate)}>
+              View details
             </DropdownMenuItem>
             <DropdownMenuItem>Schedule interview</DropdownMenuItem>
             <DropdownMenuSeparator />

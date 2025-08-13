@@ -17,12 +17,14 @@ import { ErrorState } from "@/components/error-state";
 import { createColumns } from "@/modules/candidates/ui/components/columns";
 import { DataTable } from "@/modules/candidates/ui/components/data-table";
 import type { Candidate } from "@/modules/candidates/ui/components/columns";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NewCandidateDialog } from "@/modules/candidates/ui/components/new-candidate-dialog";
 import { UpdateCandidateDialog } from "@/modules/candidates/ui/components/update-candidate-dialog";
+import { CandidateDetailsSheet } from "@/modules/candidates/ui/components/candidate-details-sheet";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useConfirm } from "@/hooks/use-confirm";
+import { eventBus, EVENTS } from "@/lib/events";
 
 export const DashboardView = () => {
   const trpc = useTRPC();
@@ -33,12 +35,28 @@ export const DashboardView = () => {
   const [newCandidateDialogOpen, setNewCandidateDialogOpen] = useState(false);
   const [editCandidateDialogOpen, setEditCandidateDialogOpen] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
+  const [candidateDetailsOpen, setCandidateDetailsOpen] = useState(false);
+  const [selectedCandidateForDetails, setSelectedCandidateForDetails] = useState<Candidate | null>(null);
 
   // Set up confirmation dialog for delete operations
   const [DeleteConfirmDialog, confirmDelete] = useConfirm(
     "Delete Candidate",
     "Are you sure you want to delete this candidate? This action cannot be undone."
   );
+
+  // Listen for search events to open candidate details
+  useEffect(() => {
+    const handleOpenCandidateDetails = (candidate: Candidate) => {
+      setSelectedCandidateForDetails(candidate);
+      setCandidateDetailsOpen(true);
+    };
+
+    eventBus.on(EVENTS.OPEN_CANDIDATE_DETAILS, handleOpenCandidateDetails);
+
+    return () => {
+      eventBus.off(EVENTS.OPEN_CANDIDATE_DETAILS, handleOpenCandidateDetails);
+    };
+  }, []);
 
   const removeCandidate = useMutation({
     ...trpc.candidates.delete.mutationOptions(),
@@ -71,6 +89,18 @@ export const DashboardView = () => {
     setSelectedCandidate(null);
   };
 
+  // Handle view candidate details
+  const handleViewCandidateDetails = (candidate: Candidate) => {
+    setSelectedCandidateForDetails(candidate);
+    setCandidateDetailsOpen(true);
+  };
+
+  // Handle close candidate details
+  const handleCloseCandidateDetails = () => {
+    setCandidateDetailsOpen(false);
+    setSelectedCandidateForDetails(null);
+  };
+
   // Handle delete candidate with confirmation
   const handleDeleteCandidate = async (candidate: Candidate) => {
     // Prevent multiple delete operations
@@ -84,10 +114,11 @@ export const DashboardView = () => {
     }
   };
 
-  // Create columns with edit and delete functionality
+  // Create columns with edit, delete, and view details functionality
   const columns = createColumns({ 
     onEdit: handleEditCandidate,
     onDelete: handleDeleteCandidate,
+    onViewDetails: handleViewCandidateDetails,
     isDeleting: (candidateId: string) => removeCandidate.isPending && removeCandidate.variables?.id === candidateId
   });
 
@@ -101,6 +132,13 @@ export const DashboardView = () => {
         open={editCandidateDialogOpen}
         onOpenChange={handleEditDialogClose}
         candidateData={selectedCandidate ? [selectedCandidate] : undefined}
+      />
+      <CandidateDetailsSheet
+        open={candidateDetailsOpen}
+        onOpenChange={handleCloseCandidateDetails}
+        candidate={selectedCandidateForDetails}
+        onEdit={handleEditCandidate}
+        onDelete={handleDeleteCandidate}
       />
       {/* Render the delete confirmation dialog */}
       <DeleteConfirmDialog />
@@ -175,7 +213,11 @@ export const DashboardView = () => {
           </CardHeader>
           <CardContent className="p-0 sm:p-6">
             <div className="overflow-x-auto">
-              <DataTable columns={columns} data={candidates} />
+              <DataTable 
+                columns={columns} 
+                data={candidates}
+                onViewDetails={handleViewCandidateDetails}
+              />
             </div>
           </CardContent>
         </Card>
