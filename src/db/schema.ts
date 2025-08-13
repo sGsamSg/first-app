@@ -6,6 +6,8 @@ import {
   integer,
 } from "drizzle-orm/pg-core";
 
+import { nanoid } from "nanoid";
+
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
@@ -65,3 +67,24 @@ export const verification = pgTable("verification", {
     () => /* @__PURE__ */ new Date(),
   ),
 });
+
+// Sample candidates table for tRPC testing
+export const candidate = pgTable("candidate", {
+  id: text("id").primaryKey().$defaultFn(() => nanoid()),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  email: text("email").notNull().unique(),
+  phone: text("phone"),
+  title: text("title").notNull(),
+  experience: integer("experience").notNull(), // years of experience
+  location: text("location").notNull(),
+  status: text("status").notNull().$defaultFn(() => "active"), // "active", "inactive", "placed"
+  skills: text("skills"), // comma-separated skills
+  appliedAt: timestamp("applied_at").$defaultFn(() => new Date()).notNull(),
+  createdAt: timestamp("created_at").$defaultFn(() => new Date()).notNull(),
+  updatedAt: timestamp("updated_at").$defaultFn(() => new Date()).notNull(),
+});
+
